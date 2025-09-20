@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Secure QR Decryptor</title>
+    <title>Practical4</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -35,7 +35,7 @@
     <p><strong>Decrypted Message:</strong> <span id="decrypted"></span></p>
 
     <script>
-    // Function to get query parameter from URL
+
     function getParameterByName(name) {
         const url = window.location.href;
         name = name.replace(/[\[\]]/g, "\\$&");
@@ -46,7 +46,6 @@
         return decodeURIComponent(results[2].replace(/\+/g, " "));
     }
 
-    // Create column order based on the keyword
     function getColumnOrder(keyword) {
         keyword = keyword.toUpperCase().replace(/[^A-Z]/g, "");
         let arr = keyword.split("").map((c, i) => ({ char: c, index: i }));
@@ -54,7 +53,7 @@
         return arr.map(obj => obj.index);
     }
 
-    // Decrypt the ciphertext using columnar transposition
+
     function columnarDecrypt(ciphertext, keyword) {
         keyword = keyword.toUpperCase().replace(/[^A-Z]/g, "");
         if (!keyword.length) {
@@ -67,13 +66,13 @@
         let paddedCipher = ciphertext.padEnd(paddedLength, 'X');
         const order = getColumnOrder(keyword);
 
-        // Calculate column lengths
+
         let numFullCols = paddedCipher. Length % cols;
         if (numFullCols === 0) numFullCols = cols;
         let colLengths = Array(cols).fill(rows - 1);
         for (let i = 0; i < numFullCols; i++) colLengths[i] = rows;
 
-        // Assign ciphertext to columns in order
+
         let colData = Array(cols).fill("");
         let idx = 0;
         for (let o = 0; o < cols; o++) {
@@ -82,17 +81,17 @@
             idx += colLengths[o];
         }
 
-        // Reconstruct plaintext row by row
+
         let plaintext = "";
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
                 if (r < colData[c].length) plaintext += colData[c][r];
             }
         }
-        return plaintext.replace(/X+$/,''); // Remove trailing padding
+        return plaintext.replace(/X+$/,'');
     }
 
-    // Function to handle decryption when button is clicked
+
     function decryptMessage() {
         const key = document.getElementById("key").value.trim();
         const ciphertext = document.getElementById("ciphertext").textContent.trim();
@@ -104,7 +103,7 @@
         document.getElementById("decrypted").textContent = decrypted;
     }
 
-    // On page load, extract the ciphertext from the URL
+
     window.onload = function() {
         const ciphertext = getParameterByName("data") || "";
         if (!ciphertext) {
