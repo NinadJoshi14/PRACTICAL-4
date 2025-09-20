@@ -1,114 +1,117 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Secure Message Decryptor</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <style>
-    body { font-family: Arial, sans-serif; max-width:800px; margin:40px auto; text-align:center; }
-    input[type=text] { padding:10px; width:320px; font-size:16px; }
-    button { padding:10px 18px; font-size:16px; margin-left:8px; }
-    .label { font-weight:700; margin-top:18px; }
-    .result { margin-top:18px; font-size:18px; }
-    .small { font-size:14px; color:#555; margin-top:6px; }
-    .field { margin-top:12px; }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Practical4</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            text-align: center;
+        }
+        input, button {
+            padding: 10px;
+            margin: 10px;
+            font-size: 16px;
+        }
+        #decrypted {
+            margin-top: 20px;
+            font-weight: bold;
+            color: green;
+        }
+    </style>
 </head>
 <body>
-  <h1>Secure Message Decryptor</h1>
-  <p>Enter the decryption key below to reveal the message.</p>
+    <h1>Secure Message Decryptor</h1>
+    <p>Enter the decryption key below to reveal the message.</p>
 
-  <div class="field">
-    <input id="keyInput" type="text" placeholder="Enter decryption key" />
-    <button id="decryptBtn">Decrypt</button>
-  </div>
+    <div>
+        <input type="text" id="key" placeholder="Enter decryption key" />
+        <button onclick="decryptMessage()">Decrypt</button>
+    </div>
 
-  <div class="label" id="ctLabel">Ciphertext: <span id="ctValue" style="font-weight:normal"></span></div>
-  <div class="label">Decrypted Message:</div>
-  <div id="ptValue" class="result"></div>
+    <p><strong>Ciphertext:</strong> <span id="ciphertext">Loading...</span></p>
+    <p><strong>Decrypted Message:</strong> <span id="decrypted"></span></p>
 
-  <div class="small" id="origUrlArea"></div>
+    <script>
 
-<script>
-(function(){
-  // Read URL params
-  function getParam(name) {
-    const params = new URLSearchParams(window.location.search);
-    return params.get(name);
-  }
-
-  const ciphertext = getParam('c') || '';
-  const originalUrl = getParam('u') || '';
-
-  const ctValue = document.getElementById('ctValue');
-  const ptValue = document.getElementById('ptValue');
-  const origUrlArea = document.getElementById('origUrlArea');
-
-  ctValue.textContent = ciphertext ? ciphertext : 'No data found in URL.';
-  if (originalUrl) {
-    origUrlArea.innerHTML = 'Original URL used for encryption: <a href="' + escapeHtml(originalUrl) + '" target="_blank">' + escapeHtml(originalUrl) + '</a>';
-  }
-
-  document.getElementById('decryptBtn').addEventListener('click', function(){
-    const key = document.getElementById('keyInput').value || '';
-    if (!ciphertext) { ptValue.textContent = 'No ciphertext to decrypt.'; return; }
-    if (!key) { ptValue.textContent = 'Please enter decryption key.'; return; }
-    try {
-      const pt = columnar_decrypt(ciphertext, key);
-      ptValue.textContent = pt;
-    } catch (e) {
-      ptValue.textContent = 'Decryption error: ' + e.message;
-    }
-  });
-
-  // Columnar transposition decryption (mirrors the python encrypt)
-  function columnar_decrypt(ct, keyword, padChar='X') {
-    // ct length and keyword length
-    const n = keyword.length;
-    const L = ct.length;
-    const rows = Math.ceil(L / n);
-
-    // Determine column order used during encryption: sorted by char then original index
-    const cols = [];
-    for (let i=0;i<keyword.length;i++) cols.push({ch: keyword[i], idx: i});
-    cols.sort((a,b) => {
-      if (a.ch < b.ch) return -1;
-      if (a.ch > b.ch) return 1;
-      return a.idx - b.idx;
-    });
-
-    // How many characters in each column? Because we always padded to full rows during encryption,
-    // each column will have exactly `rows` characters.
-    // So slice ciphertext in the sorted column order into column strings of length = rows
-    const columns = new Array(n);
-    let pos = 0;
-    for (let k=0;k<cols.length;k++){
-      const colIndex = cols[k].idx;
-      columns[colIndex] = ct.slice(pos, pos + rows).split('');
-      pos += rows;
+    function getParameterByName(name) {
+        const url = window.location.href;
+        name = name.replace(/[\[\]]/g, "\\$&");
+        const regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+              results = regex.exec(url);
+        if (!results) return null;
+        if (!results[2]) return '';
+        return decodeURIComponent(results[2].replace(/\+/g, " "));
     }
 
-    // Now rebuild plaintext reading row-wise left->right across original column ordering
-    let plaintext = '';
-    for (let r=0;r<rows;r++){
-      for (let col=0; col<n; col++){
-        const arr = columns[col];
-        if (!arr) continue;
-        if (r < arr.length) plaintext += arr[r];
-      }
+    function getColumnOrder(keyword) {
+        keyword = keyword.toUpperCase().replace(/[^A-Z]/g, "");
+        let arr = keyword.split("").map((c, i) => ({ char: c, index: i }));
+        arr.sort((a, b) => a.char.localeCompare(b.char));
+        return arr.map(obj => obj.index);
     }
 
-    // Strip trailing pad characters that were used (X). Only strip trailing pad chars.
-    while (plaintext.endsWith(padChar)) plaintext = plaintext.slice(0, -1);
-    return plaintext;
-  }
 
-  // small helper to escape HTML in output
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});
-  }
+    function columnarDecrypt(ciphertext, keyword) {
+        keyword = keyword.toUpperCase().replace(/[^A-Z]/g, "");
+        if (!keyword.length) {
+            alert("Keyword must have at least one letter.");
+            return "";
+        }
+        const cols = keyword.length;
+        const rows = Math.ceil(ciphertext.length / cols);
+        const paddedLength = rows * cols;
+        let paddedCipher = ciphertext.padEnd(paddedLength, 'X');
+        const order = getColumnOrder(keyword);
 
-})();
-</script>
+
+        let numFullCols = paddedCipher. Length % cols;
+        if (numFullCols === 0) numFullCols = cols;
+        let colLengths = Array(cols).fill(rows - 1);
+        for (let i = 0; i < numFullCols; i++) colLengths[i] = rows;
+
+
+        let colData = Array(cols).fill("");
+        let idx = 0;
+        for (let o = 0; o < cols; o++) {
+            let col = order[o];
+            colData[col] = paddedCipher.slice(idx, idx + colLengths[o]);
+            idx += colLengths[o];
+        }
+
+
+        let plaintext = "";
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                if (r < colData[c].length) plaintext += colData[c][r];
+            }
+        }
+        return plaintext.replace(/X+$/,'');
+    }
+
+
+    function decryptMessage() {
+        const key = document.getElementById("key").value.trim();
+        const ciphertext = document.getElementById("ciphertext").textContent.trim();
+        if (!key) {
+            alert("Please enter a keyword.");
+            return;
+        }
+        const decrypted = columnarDecrypt(ciphertext, key);
+        document.getElementById("decrypted").textContent = decrypted;
+    }
+
+
+    window.onload = function() {
+        const ciphertext = getParameterByName("data") || "";
+        if (!ciphertext) {
+            document.getElementById("ciphertext").textContent = "No data found in URL.";
+            return;
+        }
+        document.getElementById("ciphertext").textContent = ciphertext;
+    }
+    </script>
 </body>
 </html>
