@@ -1,117 +1,280 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Practical4</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            text-align: center;
-        }
-        input, button {
-            padding: 10px;
-            margin: 10px;
-            font-size: 16px;
-        }
-        #decrypted {
-            margin-top: 20px;
-            font-weight: bold;
-            color: green;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Secure Message Decryptor — Practical4</title>
+  <style>
+    :root{
+      --bg1:#0f172a; /* deep navy */
+      --bg2:#0b1220; /* almost black */
+      --glass: rgba(255,255,255,0.06);
+      --accent1: #7c3aed; /* violet */
+      --accent2: #06b6d4; /* cyan */
+      --muted: rgba(255,255,255,0.65);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
+    body{
+      background: radial-gradient(800px 400px at 10%, rgba(124,58,237,0.12), transparent 10%),
+                  radial-gradient(700px 350px at 90% 85%, rgba(6,182,212,0.08), transparent 12%),
+                  linear-gradient(180deg,var(--bg1),var(--bg2));
+      color: #e6eef8;
+      display:flex;align-items:center;justify-content:center;padding:32px;
+    }
+
+    .card{
+      width:100%;max-width:920px;border-radius:18px;padding:28px;backdrop-filter: blur(8px) saturate(120%);
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+      box-shadow: 0 10px 30px rgba(2,6,23,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
+      display:grid;grid-template-columns:430px 1fr;gap:22px;align-items:start;
+    }
+
+    /* left panel */
+    .left{
+      padding:20px;border-radius:14px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border:1px solid rgba(255,255,255,0.03);
+    }
+    h1{margin:2px 0 8px;font-size:20px;letter-spacing:-0.2px}
+    p.lead{color:var(--muted);margin:0 0 16px}
+
+    .cipherbox{
+      background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:10px;padding:14px;margin:12px 0;border:1px dashed rgba(255,255,255,0.03);
+      font-family:monospace;word-break:break-all;color:#dbeafe;font-size:14px;min-height:74px;display:flex;align-items:center;justify-content:space-between
+    }
+
+    .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+    .input, .key{
+      flex:1;min-width:120px;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit;font-size:15px
+    }
+
+    .btn{
+      appearance:none;border:0;padding:12px 16px;border-radius:10px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:10px;justify-content:center
+    }
+    .btn-decrypt{background:linear-gradient(90deg,var(--accent1),var(--accent2));color:#001;box-shadow:0 8px 18px rgba(6,182,212,0.12);}
+    .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--muted)}
+
+    .right{padding:22px;border-radius:14px;background:linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.03)}
+    .result{
+      min-height:120px;border-radius:12px;padding:18px;background:linear-gradient(180deg, rgba(0,0,0,0.12), rgba(255,255,255,0.01));font-size:16px;line-height:1.5;box-shadow: inset 0 1px 0 rgba(255,255,255,0.02)
+    }
+
+    .tag{display:inline-block;padding:6px 10px;border-radius:999px;font-size:12px;background:rgba(255,255,255,0.03);color:var(--muted);margin-right:8px}
+
+    footer{margin-top:12px;color:var(--muted);font-size:13px}
+
+    .fancy-anim{transform-origin:center;transition:transform .25s cubic-bezier(.2,.9,.3,1)}
+    .btn-decrypt:hover .fancy-anim{transform:translateY(-3px) rotate(-2deg) scale(1.02)}
+
+    .decrypted-text{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;background:linear-gradient(90deg, rgba(124,58,237,0.06), rgba(6,182,212,0.04));padding:12px;border-radius:10px;margin-top:12px;color:#e6f1ff}
+
+    /* small screen */
+    @media (max-width:880px){
+      .card{grid-template-columns:1fr;}
+    }
+
+    /* subtle glow */
+    .accent-ring{position:absolute;pointer-events:none;inset:0;border-radius:20px;box-shadow:0 30px 80px rgba(124,58,237,0.06);}
+  </style>
 </head>
 <body>
-    <h1>Secure Message Decryptor</h1>
-    <p>Enter the decryption key below to reveal the message.</p>
+  <div class="card">
+    <div class="left">
+      <h1>Secure Message Decryptor</h1>
+      <p class="lead">Paste the ciphertext in the box below (or load via <code>?data=...</code> in the URL). Enter the keyword and hit Decrypt — safe and offline.</p>
 
-    <div>
-        <input type="text" id="key" placeholder="Enter decryption key" />
-        <button onclick="decryptMessage()">Decrypt</button>
+      <div class="cipherbox" id="cipherbox">
+        <span id="ciphertext">Loading...</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-ghost" id="copyCipher">Copy</button>
+        </div>
+      </div>
+
+      <div class="controls">
+        <input class="key" id="key" placeholder="Enter keyword (letters only)" />
+        <button class="btn btn-decrypt" onclick="decryptMessage()"><span class="fancy-anim">🔐 Decrypt</span></button>
+        <button class="btn btn-ghost" id="clearAll">Clear</button>
+      </div>
+
+      <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <span class="tag">Algorithm: Columnar Transposition</span>
+        <span class="tag">Padding: X</span>
+        <span class="tag">Offline</span>
+      </div>
+
+      <footer>Tip: If you used a QR code, pass the ciphertext as <code>?data=YOUR_CIPHERTEXT</code> in the URL.</footer>
     </div>
 
-    <p><strong>Ciphertext:</strong> <span id="ciphertext">Loading...</span></p>
-    <p><strong>Decrypted Message:</strong> <span id="decrypted"></span></p>
+    <div class="right">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div>
+          <div style="font-size:13px;color:var(--muted)">Decrypted Message</div>
+          <div style="font-weight:700;font-size:18px">Result</div>
+        </div>
+        <div style="text-align:right;color:var(--muted);font-size:13px">Status: <strong id="status">Waiting</strong></div>
+      </div>
 
-    <script>
+      <div class="result" id="resultBox">
+        <div id="decrypted" class="decrypted-text">—</div>
+      </div>
 
+      <div style="display:flex;gap:10px;margin-top:14px;align-items:center">
+        <button class="btn btn-ghost" id="downloadBtn">Download .txt</button>
+        <button class="btn btn-ghost" id="showGrid">Show Grid</button>
+      </div>
+
+      <div id="gridPreview" style="margin-top:12px;display:none;font-family:monospace;background:rgba(0,0,0,0.12);padding:12px;border-radius:8px"></div>
+    </div>
+
+    <div class="accent-ring"></div>
+  </div>
+
+  <script>
     function getParameterByName(name) {
-        const url = window.location.href;
-        name = name.replace(/[\[\]]/g, "\\$&");
-        const regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
-              results = regex.exec(url);
-        if (!results) return null;
-        if (!results[2]) return '';
-        return decodeURIComponent(results[2].replace(/\+/g, " "));
+      const url = window.location.href;
+      name = name.replace(/[\[\]]/g, "\\$&");
+      const regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+            results = regex.exec(url);
+      if (!results) return null;
+      if (!results[2]) return '';
+      return decodeURIComponent(results[2].replace(/\+/g, " "));
     }
 
     function getColumnOrder(keyword) {
-        keyword = keyword.toUpperCase().replace(/[^A-Z]/g, "");
-        let arr = keyword.split("").map((c, i) => ({ char: c, index: i }));
-        arr.sort((a, b) => a.char.localeCompare(b.char));
-        return arr.map(obj => obj.index);
+      keyword = keyword.toUpperCase().replace(/[^A-Z]/g, "");
+      let arr = keyword.split("").map((c, i) => ({ char: c, index: i }));
+      arr.sort((a, b) => a.char.localeCompare(b.char) || a.index - b.index);
+      return arr.map(obj => obj.index);
     }
-
 
     function columnarDecrypt(ciphertext, keyword) {
-        keyword = keyword.toUpperCase().replace(/[^A-Z]/g, "");
-        if (!keyword.length) {
-            alert("Keyword must have at least one letter.");
-            return "";
+      keyword = keyword.toUpperCase().replace(/[^A-Z]/g, "");
+      if (!keyword.length) return "";
+      const cols = keyword.length;
+      const len = ciphertext.length;
+      if (len === 0) return "";
+
+      const rows = Math.ceil(len / cols);
+      const numShortCols = cols * rows - len; // number of columns that have (rows-1) chars
+      const order = getColumnOrder(keyword); // maps sorted-order position -> original column index
+
+      // Determine column lengths in the order they will be read (sorted key order)
+      let colLengthsByOrder = new Array(cols).fill(0);
+      for (let o = 0; o < cols; o++) {
+        // for sorted-order index o: if o < (cols - numShortCols) -> full rows, else shorter
+        colLengthsByOrder[o] = (o < (cols - numShortCols)) ? rows : (rows - 1);
+      }
+
+      // Build an array of column strings
+      let colData = new Array(cols).fill("");
+      let idx = 0;
+      for (let o = 0; o < cols; o++) {
+        const colIndex = order[o]; // which column (0..cols-1) this sorted-order slice belongs to
+        const clen = colLengthsByOrder[o];
+        colData[colIndex] = ciphertext.slice(idx, idx + clen);
+        idx += clen;
+      }
+
+      // Reconstruct plaintext by reading row-wise
+      let plaintext = "";
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (r < (colData[c] || "").length) plaintext += (colData[c] || "")[r];
         }
-        const cols = keyword.length;
-        const rows = Math.ceil(ciphertext.length / cols);
-        const paddedLength = rows * cols;
-        let paddedCipher = ciphertext.padEnd(paddedLength, 'X');
-        const order = getColumnOrder(keyword);
+      }
 
-
-        let numFullCols = paddedCipher. Length % cols;
-        if (numFullCols === 0) numFullCols = cols;
-        let colLengths = Array(cols).fill(rows - 1);
-        for (let i = 0; i < numFullCols; i++) colLengths[i] = rows;
-
-
-        let colData = Array(cols).fill("");
-        let idx = 0;
-        for (let o = 0; o < cols; o++) {
-            let col = order[o];
-            colData[col] = paddedCipher.slice(idx, idx + colLengths[o]);
-            idx += colLengths[o];
-        }
-
-
-        let plaintext = "";
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                if (r < colData[c].length) plaintext += colData[c][r];
-            }
-        }
-        return plaintext.replace(/X+$/,'');
+      // remove trailing padding X's if present
+      return plaintext.replace(/X+$/i, '');
     }
-
 
     function decryptMessage() {
-        const key = document.getElementById("key").value.trim();
-        const ciphertext = document.getElementById("ciphertext").textContent.trim();
-        if (!key) {
-            alert("Please enter a keyword.");
-            return;
-        }
-        const decrypted = columnarDecrypt(ciphertext, key);
-        document.getElementById("decrypted").textContent = decrypted;
+      const keyEl = document.getElementById("key");
+      const key = keyEl.value.trim();
+      const ciphertext = document.getElementById("ciphertext").textContent.trim();
+      const status = document.getElementById("status");
+      const resultEl = document.getElementById("decrypted");
+
+      if (!ciphertext || ciphertext === 'No data found in URL.') {
+        alert('No ciphertext available to decrypt.');
+        return;
+      }
+      if (!key) { alert('Please enter a keyword.'); keyEl.focus(); return; }
+
+      status.textContent = 'Decrypting...';
+      try {
+        const out = columnarDecrypt(ciphertext, key);
+        resultEl.textContent = out || 'No readable plaintext (wrong key?)';
+        document.getElementById('resultBox').scrollIntoView({behavior:'smooth'});
+        status.textContent = 'Done';
+
+        // populate grid preview
+        buildGridPreview(ciphertext, key, out);
+      } catch (e) {
+        status.textContent = 'Error';
+        resultEl.textContent = 'Decryption failed: ' + e.message;
+        console.error(e);
+      }
     }
 
+    function buildGridPreview(ciphertext, keyword, plaintext) {
+      const cols = keyword.length;
+      const rows = Math.ceil(ciphertext.length / cols);
+      // Fill plaintext into grid row-wise (simulate original plaintext before column read)
+      let padded = plaintext;
+      while (padded.length < rows * cols) padded += 'X';
+      let grid = '';
+      for (let r = 0; r < rows; r++){
+        let row = '';
+        for (let c = 0; c < cols; c++){
+          row += padded[r*cols + c];
+          if (c < cols-1) row += ' ';
+        }
+        grid += row + '\n';
+      }
+      document.getElementById('gridPreview').textContent = grid;
+    }
 
     window.onload = function() {
-        const ciphertext = getParameterByName("data") || "";
-        if (!ciphertext) {
-            document.getElementById("ciphertext").textContent = "No data found in URL.";
-            return;
-        }
-        document.getElementById("ciphertext").textContent = ciphertext;
+      const ciphertext = getParameterByName("data") || "";
+      const cb = document.getElementById('ciphertext');
+      if (!ciphertext) {
+        cb.textContent = "No data found in URL.";
+      } else {
+        cb.textContent = ciphertext;
+      }
+
+      document.getElementById('copyCipher').addEventListener('click', ()=>{
+        const text = cb.textContent || '';
+        if (!text) return;
+        navigator.clipboard?.writeText(text).then(()=>{
+          alert('Ciphertext copied to clipboard');
+        }).catch(()=>{ alert('Copy failed'); });
+      });
+
+      document.getElementById('clearAll').addEventListener('click', ()=>{
+        document.getElementById('key').value = '';
+        document.getElementById('decrypted').textContent = '—';
+        document.getElementById('status').textContent = 'Waiting';
+        document.getElementById('gridPreview').style.display = 'none';
+      });
+
+      document.getElementById('showGrid').addEventListener('click', ()=>{
+        const gp = document.getElementById('gridPreview');
+        gp.style.display = gp.style.display === 'none' ? 'block' : 'none';
+      });
+
+      document.getElementById('downloadBtn').addEventListener('click', ()=>{
+        const txt = document.getElementById('decrypted').textContent || '';
+        const blob = new Blob([txt], {type:'text/plain'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'decrypted.txt'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      });
+
+      // allow Enter key to decrypt
+      document.getElementById('key').addEventListener('keydown',(e)=>{ if(e.key==='Enter') decryptMessage(); });
     }
-    </script>
+  </script>
 </body>
 </html>
